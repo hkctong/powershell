@@ -46,6 +46,9 @@ The script offers the following major features:
 - Sharepoint subsites can be counted as objects and are respected in the objectcount (`-recurseSP`)
  
 #> 
+
+
+
 [CmdletBinding()]
 Param(        
     [Parameter()]
@@ -58,7 +61,7 @@ Param(
 
     # Format string to build the jobname. {0} will be replaced with the number of the job and can be formatted as PowerShell format string
     # {0:d3} will create a padded number. 2 will become 002, 12 will become 012
-    [string] $jobNamePattern = "SharePointTeams-{0:d3}",
+    [string] $jobNamePattern = "OOCL-TeamsBackup-{0:d3}",
 
     # Include chats in Teams backups
     [switch] $withTeamsChats = $false,
@@ -142,6 +145,16 @@ DynamicParam {
 }
 
 BEGIN {
+
+<#HouseKeep Jobs
+$job =  Get-VBOJob -Name "OOCL-TeamsBackup-*" 
+
+foreach ($oe in $job) 
+{
+Remove-VBOJob -Job $oe -Confirm:$false 
+}
+Edit by Chris Tong #>
+
     $global:version = '1.0.0'
     filter timelog { "$(Get-Date -Format "yyyy-MM-dd HH:mm:ss"): $_" }
 
@@ -550,7 +563,8 @@ PROCESS {
 
     if (!$limitServiceTo -or $limitServiceTo -eq "Teams") {
         "Reading Teams from organization - this can take a while" | timelog
-        $teams = Get-VBOOrganizationTeam -NotInJob -Organization $org 
+    #   $teams = Get-VBOOrganizationTeam -NotInJob -Organization $org 
+        $teams = Get-VBOOrganizationTeam -NotInJob -Organization $org -DataSource:PreferLocalResynced
         "Found {0} Teams not yet in backup jobs" -f $teams.Count | timelog
     }
 
@@ -696,3 +710,7 @@ PROCESS {
 END {
     Stop-Transcript 
 }
+
+<# Example 
+./vb365-JobManager.ps1 -Organization "vd1t1.onmicrosoft.com" -Repository localS3,2ndRepo -recurseSP -limitServiceTo Teams -checkBackups -objectsPerJob 10
+#>
